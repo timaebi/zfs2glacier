@@ -35,34 +35,17 @@ var enableCmd = &cobra.Command{
 	Short: "enable automatic backups for the given volume",
 	Long:  ``,
 	Args:  cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		ds, err := zfs.GetDataset(args[0])
-		if err != nil {
-			return err
-		}
+		check(err)
 		err = ds.SetProperty(bkp.BackupEnabled, "true")
-		if err != nil {
-			return err
-		}
+		check(err)
 		err = ds.SetProperty(bkp.IncrementalInterval, strconv.FormatUint(incrementalInterval, 10))
-		if err != nil {
-			return err
-		}
-		return nil
+		check(err)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(enableCmd)
-
 	enableCmd.Flags().Uint64VarP(&incrementalInterval, "incremental", "i", 2592000, "time between two incremental backups, defaults to 30 days")
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// enableCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// enableCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

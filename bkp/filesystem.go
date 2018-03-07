@@ -18,7 +18,9 @@ const (
 	incremental
 	none
 )
+// BackupEnabled zfs attribute. True means filesystem should be backed up
 const BackupEnabled = "ch.floor4:backup_enabled"
+// IncrementalInterval zfs attribute. Specifies the time in seconds between two incremental backups
 const IncrementalInterval = "ch.floor4:incremental_interval"
 
 // A Filesystem provides all information to decide if a backup should be done
@@ -100,7 +102,7 @@ func (fs *ZFSFilesystem) Backup(forceFull bool) Backup {
 // IsBackupEnabled returns true if the backup it should be backed up on a regular basis
 func (fs *ZFSFilesystem) IsBackupEnabled() bool {
 	enabled, ps, err := fs.dataset.GetProperty(BackupEnabled)
-	if err != nil || ps != zfsiface.Local {
+	if err != nil || ps !=zfsiface.Local{
 		return false
 	}
 	return cases.Lower(language.English).String(enabled) == "true" || enabled == "1"
@@ -153,11 +155,7 @@ func (fs *ZFSFilesystem) findBaseSnapshot() zfsiface.Dataset {
 	if incremental != nil {
 		return incremental
 	}
-	full := fs.getLastFullBackup()
-	if full != nil {
-		return full
-	}
-	return nil
+	return fs.getLastFullBackup()
 }
 
 type zfsAPI interface {

@@ -14,22 +14,15 @@ var backupCmd = &cobra.Command{
 	Use:   "backup",
 	Short: "create a backup of all filesystems that are due",
 	Long:  ``,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		log.SetLevel(log.DebugLevel)
 		b, err := bkp.NewBatch(filter)
-		if err != nil {
-			return err
-		}
+		check(err)
 		err = b.Init()
-		if err != nil {
-			return err
-		}
+		check(err)
 		log.Debug("New batch initialized")
 		err = b.Run()
-		if err != nil {
-			return err
-		}
-		return nil
+		check(err)
 	},
 }
 

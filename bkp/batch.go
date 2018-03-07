@@ -12,6 +12,7 @@ import (
 	"io"
 )
 
+// A Batch contains zfs filesystems that can be stored in aws glacier when executed
 type Batch struct {
 	filter         string
 	filesystems    []Filesystem
@@ -21,15 +22,17 @@ type Batch struct {
 }
 
 // NewBatch creates a new batch
+// If filter is set, only filesystems under the given path are considered.
 func NewBatch(filter string) (*Batch, error) {
-	g, err := SetupGlacierClient()
+	g, err := setupGlacierClient()
 	if err != nil {
 		return nil, err
 	}
 	return &Batch{filter: filter, glacier: g}, nil
 }
 
-func SetupGlacierClient() (glacieriface.GlacierAPI, error) {
+// setupGlacierClient initializes the connection to aws
+func setupGlacierClient() (glacieriface.GlacierAPI, error) {
 	// Setup AWS client
 	s, err := session.NewSessionWithOptions(session.Options{
 		SharedConfigFiles: []string{"/etc/aws.conf"}, // TODO make this configurable with
@@ -119,7 +122,8 @@ func (b *Batch) upload(vault string, bkp Backup) error {
 	for bkp.HasNextPart() {
 		p, h := bkp.NextPart()
 		hashes = append(hashes, h)
-		l, err := p.Seek(0, io.SeekEnd)
+		var l int64
+		l, err = p.Seek(0, io.SeekEnd)
 		if err != nil {
 			return err
 		}
@@ -133,7 +137,8 @@ func (b *Batch) upload(vault string, bkp Backup) error {
 		treeHash := fmt.Sprintf("%x", h)
 
 		log.WithField("range", r).Debug("uploading range")
-		uo, err := b.glacier.UploadMultipartPart(&glacier.UploadMultipartPartInput{
+		var uo *glacier.UploadMultipartPartOutput
+		uo, err = b.glacier.UploadMultipartPart(&glacier.UploadMultipartPartInput{
 			AccountId: aws.String("-"),
 			Body:      p,
 			Checksum:  &treeHash,
@@ -141,10 +146,10 @@ func (b *Batch) upload(vault string, bkp Backup) error {
 			UploadId:  o.UploadId,
 			VaultName: &vault,
 		})
-		fmt.Print(uo.String())
 		if err != nil {
 			return err
 		}
+		fmt.Print(uo.String())
 	}
 	fullHash := fmt.Sprintf("%x", glacier.ComputeTreeHash(hashes))
 	cu, err := b.glacier.CompleteMultipartUpload(&glacier.CompleteMultipartUploadInput{
@@ -158,8 +163,7 @@ func (b *Batch) upload(vault string, bkp Backup) error {
 		return err
 	}
 	fmt.Print(cu.String())
-	bkp.MarkSuccessful(*cu.ArchiveId)
-	return nil
+	return bkp.MarkSuccessful(*cu.ArchiveId)
 }
 
 func (b *Batch) vaultExists(name string) bool {
@@ -171,6 +175,7 @@ func (b *Batch) vaultExists(name string) bool {
 	return false
 }
 
+// Print renders a table to stdout which displays backup status
 func (b *Batch) Print() {
 	const fmtStr = "%-50s | %-30s | %-30s | %-20s | %-20s\n"
 	fmt.Printf(fmtStr, "Name", "Last full bkp", "Last incr bkp", "Incremental interval", "Vault archives")

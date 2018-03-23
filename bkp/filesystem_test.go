@@ -111,6 +111,8 @@ func TestZFSFilesystem_IsDue(t *testing.T) {
 		Return([]zfsiface.Dataset{full2HoursAgo, incremental1HourAgo}, nil)
 	m.On("GetProperty", "ch.floor4:incremental_interval").
 		Return("1800", zfsiface.Local, nil)
+	m.On("Diff", "tank/test@glacier-incremental").
+		Return([]*zfsiface.InodeChange{{}}, nil)
 	d := ZFSFilesystem{m}
 	assert.True(t, d.IsDue())
 
@@ -122,6 +124,8 @@ func TestZFSFilesystem_IsDue(t *testing.T) {
 		Return([]zfsiface.Dataset{full2HoursAgo, incremental1HourAgo}, nil)
 	m.On("GetProperty", "ch.floor4:incremental_interval").
 		Return("5400", zfsiface.Local, nil)
+	m.On("Diff", "tank/test@glacier-incremental").
+		Return([]*zfsiface.InodeChange{{}}, nil)
 	d = ZFSFilesystem{m}
 	assert.False(t, d.IsDue())
 
@@ -133,19 +137,34 @@ func TestZFSFilesystem_IsDue(t *testing.T) {
 		Return([]zfsiface.Dataset{full2HoursAgo}, nil)
 	m.On("GetProperty", "ch.floor4:incremental_interval").
 		Return("5400", zfsiface.Local, nil)
+	m.On("Diff", "tank/test@glacier-full").
+		Return([]*zfsiface.InodeChange{{}}, nil)
 	d = ZFSFilesystem{m}
 	assert.True(t, d.IsDue())
 
-	// backup every hour hour no backup
+	// backup every hour, no existing backup
 	m = &Dataset{}
 	m.On("GetNativeProperties").
 		Return(&zfsiface.NativeProperties{Creation: time.Now().Add(-24 * time.Hour)})
 	m.On("Snapshots").
 		Return([]zfsiface.Dataset{}, nil)
 	m.On("GetProperty", "ch.floor4:incremental_interval").
-		Return("3600", zfsiface.Local, nil)
+		Return("3600", zfsiface.Local)
 	d = ZFSFilesystem{m}
 	assert.True(t, d.IsDue())
+
+	// backup every half an hour, last full backup 2 hours ago, last incremental 1 hour ago, no changes made
+	m = &Dataset{}
+	m.On("GetNativeProperties").
+		Return(&zfsiface.NativeProperties{Creation: time.Now().Add(-24 * time.Hour)})
+	m.On("Snapshots").
+		Return([]zfsiface.Dataset{full2HoursAgo, incremental1HourAgo}, nil)
+	m.On("GetProperty", "ch.floor4:incremental_interval").
+		Return("1800", zfsiface.Local, nil)
+	m.On("Diff", "tank/test@glacier-incremental").
+		Return([]*zfsiface.InodeChange{}, nil)
+	d = ZFSFilesystem{m}
+	assert.False(t, d.IsDue())
 }
 
 func TestListZFSFilesystems(t *testing.T) {
@@ -254,7 +273,7 @@ func TestZFSFilesystem_Backup(t *testing.T) {
 	existingTmp.On("GetNativeProperties").Return(&zfsiface.NativeProperties{Name: "tank/test@glacier-tmp"})
 	m = &Dataset{}
 	m.On("Snapshots").
-		Return([]zfsiface.Dataset{existingTmp,full2HoursAgo}, nil)
+		Return([]zfsiface.Dataset{existingTmp, full2HoursAgo}, nil)
 	m.On("GetProperty", "ch.floor4:incremental_interval").
 		Return("600", zfsiface.Local, nil)
 	d = ZFSFilesystem{m}

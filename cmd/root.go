@@ -17,10 +17,11 @@ var rootCmd = &cobra.Command{
 	Short: "backup zfs filesystems to aws glacier",
 	Long:  ``,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		hook, err := logrus_syslog.NewSyslogHook("", "", syslog.LOG_USER, "")
+		hook, err := logrus_syslog.NewSyslogHook("", "", syslog.LOG_USER, "zfs2glacier")
 		if err != nil {
 			panic(err)
 		}
+		log.SetFormatter(&log.TextFormatter{DisableColors: true})
 		log.AddHook(hook)
 		if verbose {
 			log.SetLevel(log.DebugLevel)

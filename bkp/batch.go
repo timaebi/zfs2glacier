@@ -1,5 +1,4 @@
 package bkp
-// TODO log to syslog
 
 import (
 	"github.com/aws/aws-sdk-go/service/glacier"
@@ -64,6 +63,12 @@ func (b *Batch) Init() error {
 	}
 	b.existingVaults = v.VaultList
 
+	vaultNames := make([]string, len(b.existingVaults))
+	for i, v := range b.existingVaults {
+		vaultNames[i] = *v.VaultName
+	}
+	log.WithField("vaults", vaultNames).Debug("aws existing vaults")
+
 	b.initialized = true
 	return nil
 }
@@ -77,7 +82,7 @@ func (b *Batch) Run() error {
 	if !b.initialized {
 		return errors.New("batch needs to be initialized before run")
 	}
-
+	log.WithField("nFS", len(b.filesystems)).Info("starting batch")
 	for _, fs := range b.filesystems {
 		if fs.IsBackupEnabled() {
 			forceFull := false
@@ -101,10 +106,15 @@ func (b *Batch) Run() error {
 				if err := b.upload(vn, backup); err != nil {
 					return err
 				}
-				log.WithField("vault", vn).Info("backup finished")
+				log.WithField("vault", vn).Info("finished backup")
+			} else {
+				log.WithField("vault", vn).Info("backup is not due")
 			}
+		} else {
+			log.WithField("vault", fs.GetVaultName()).Debug("skipping file system with disabled backup")
 		}
 	}
+	log.Info("batch completed")
 	return nil
 }
 
@@ -118,6 +128,7 @@ func (b *Batch) upload(vault string, bkp Backup) error {
 	if err != nil {
 		return err
 	}
+	log.WithField("vault", vault).Debug("multipart upload initiated")
 	pos := int64(0)
 	hashes := make([][]byte, 0, 100)
 	for bkp.HasNextPart() {
@@ -137,7 +148,7 @@ func (b *Batch) upload(vault string, bkp Backup) error {
 
 		treeHash := fmt.Sprintf("%x", h)
 
-		log.WithField("range", r).Debug("uploading range")
+		log.WithField("range", r).Debug("multipart uploading range")
 		var uo *glacier.UploadMultipartPartOutput
 		uo, err = b.glacier.UploadMultipartPart(&glacier.UploadMultipartPartInput{
 			AccountId: aws.String("-"),
@@ -163,6 +174,7 @@ func (b *Batch) upload(vault string, bkp Backup) error {
 	if err != nil {
 		return err
 	}
+	log.WithField("vault", vault).Debug("multipart upload completed")
 	fmt.Print(cu.String())
 	return bkp.MarkSuccessful(*cu.ArchiveId)
 }

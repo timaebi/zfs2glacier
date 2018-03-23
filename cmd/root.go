@@ -5,6 +5,8 @@ import (
 	"os"
 	"github.com/spf13/cobra"
 	log "github.com/sirupsen/logrus"
+	logrus_syslog "github.com/sirupsen/logrus/hooks/syslog"
+	"log/syslog"
 )
 
 var verbose bool
@@ -15,10 +17,15 @@ var rootCmd = &cobra.Command{
 	Short: "backup zfs filesystems to aws glacier",
 	Long:  ``,
 	PreRun: func(cmd *cobra.Command, args []string) {
+		hook, err := logrus_syslog.NewSyslogHook("", "", syslog.LOG_USER, "")
+		if err != nil {
+			panic(err)
+		}
+		log.AddHook(hook)
 		if verbose {
 			log.SetLevel(log.DebugLevel)
 		} else {
-			log.SetLevel(log.WarnLevel)
+			log.SetLevel(log.InfoLevel)
 		}
 	},
 }

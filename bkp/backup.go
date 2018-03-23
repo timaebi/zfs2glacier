@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/glacier"
 	"strings"
 	"encoding/json"
+	log "github.com/sirupsen/logrus"
 )
 
 const glacierArchiveID = "ch.floor4:glacier-archive-id"
@@ -36,8 +37,12 @@ func newBackup(dataset, base zfsiface.Dataset) Backup {
 	go func() {
 		var err error
 		if base == nil {
+			log.WithField("fs", dataset.GetNativeProperties().Name).WithField("isFull", true).
+				Info("starting full backup")
 			err = dataset.SendSnapshot(writer)
 		} else {
+			log.WithField("fs", dataset.GetNativeProperties().Name).WithField("isFull", false).
+				Info("starting incremental backup")
 			err = dataset.SendIncrementalSnapshot(base, writer)
 		}
 		if err != nil {

@@ -28,5 +28,5 @@ var statusCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(statusCmd)
-	backupCmd.Flags().StringVarP(&filter, "filter", "f", "", "restrict volumes to backup")
+	statusCmd.Flags().StringVarP(&filter, "filter", "f", "", "restrict volumes to backup")
 }

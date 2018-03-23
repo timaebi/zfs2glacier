@@ -1,4 +1,5 @@
 package bkp
+// TODO log to syslog
 
 import (
 	"github.com/aws/aws-sdk-go/service/glacier"
@@ -110,7 +111,7 @@ func (b *Batch) Run() error {
 func (b *Batch) upload(vault string, bkp Backup) error {
 	o, err := b.glacier.InitiateMultipartUpload(&glacier.InitiateMultipartUploadInput{
 		AccountId:          aws.String("-"),
-		ArchiveDescription: aws.String(""),
+		ArchiveDescription: aws.String(bkp.GetDescription()),
 		PartSize:           aws.String(strconv.Itoa(bkp.GetPartSize())),
 		VaultName:          &vault,
 	})

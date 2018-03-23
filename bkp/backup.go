@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"github.com/aws/aws-sdk-go/service/glacier"
 	"strings"
+	"encoding/json"
 )
 
 const glacierArchiveID = "ch.floor4:glacier-archive-id"
@@ -20,6 +21,14 @@ type Backup interface {
 	GetBaseDataset() zfsiface.Dataset
 	GetDataset() zfsiface.Dataset
 	IsIncremental() bool
+	GetDescription() string
+}
+
+// Metadata contains information for a backup that is rendered as JSON
+// It is saved as description field in aws
+type Metadata struct {
+	BaseArchiveID string `json:",omitempty"`
+	IsIncremental bool
 }
 
 func newBackup(dataset, base zfsiface.Dataset) Backup {
@@ -128,4 +137,25 @@ func (b *zfsBackup) MarkSuccessful(archiveID string) error {
 		return err
 	}
 	return nil
+}
+
+func (b *zfsBackup) GetDescription() string {
+	m := &Metadata{
+		IsIncremental: b.IsIncremental(),
+	}
+	if b.base != nil {
+		bdID, _, err := b.base.GetProperty(glacierArchiveID)
+		if err != nil {
+			panic(err)
+		}
+		if bdID == "" {
+			panic("No glacier archive ID found for base dataset")
+		}
+		m.BaseArchiveID = bdID
+	}
+	d, err := json.Marshal(m)
+	if err != nil {
+		panic(err)
+	}
+	return string(d)
 }

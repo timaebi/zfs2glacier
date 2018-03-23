@@ -63,3 +63,24 @@ func TestZfsBackup_MarkSuccessful(t *testing.T) {
 	mock.AssertExpectationsForObjects(t, d)
 	mock.AssertExpectationsForObjects(t, base)
 }
+
+func TestZfsBackup_GetDescription(t *testing.T) {
+	// backup with existing base
+	base := &Dataset{}
+	base.On("GetProperty", glacierArchiveID).Return("id-abc-1234", zfsiface.Local, nil)
+	bkp := zfsBackup{base: base}
+	assert.Equal(t, `{"BaseArchiveID":"id-abc-1234","IsIncremental":true}`, bkp.GetDescription())
+	base.AssertExpectations(t)
+
+	// backup without existing base
+	bkp = zfsBackup{}
+	assert.Equal(t, `{"IsIncremental":false}`, bkp.GetDescription())
+
+	// base snapshot without archive id should panic
+	base = &Dataset{}
+	base.On("GetProperty", glacierArchiveID).Return("", zfsiface.Unknown, nil)
+	bkp = zfsBackup{base: base}
+	assert.PanicsWithValue(t, "No glacier archive ID found for base dataset", func() {
+		bkp.GetDescription()
+	})
+}

@@ -20,8 +20,12 @@
 
 package main
 
-import "github.com/timaebi/zfs2glacier/cmd"
+import (
+	"github.com/timaebi/zfs2glacier/cmd"
+)
+
+var Revision string
 
 func main() {
-	cmd.Execute()
+	cmd.Execute(Revision)
 }

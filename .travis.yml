@@ -1,4 +1,26 @@
 language: go
-
 go:
-  - "1.10.x"
+- 1.x
+
+before_install:
+  - go get github.com/mitchellh/gox
+
+install:
+  - # skip
+
+script:
+  - go get -t -v ./...
+  - go test -v -race ./...
+  - gox -os="linux darwin" -arch="amd64 arm" -output="logshare.." -ldflags "-X cmd.Revision=`git describe --always`" -verbose ./...;
+
+
+deploy:
+  provider: releases
+  skip_cleanup: true
+  api_key:
+    secure: TyvKYRElFAXnUiJqpnySQXo/LSlidtZnnSJMUO6l0PnPi0WnooEO2ZcCqoCB1+gZPKFBHcLcxaPqrCJJEZ0wv4T+3hJCsWSv/0PYGp74qbQw9067RczIhUKM510G3FJehX7rclVT9DADAQQH743RCkMvyQJJ4kdLBFPgdtJEAKZvFqpU5GpQgtr29oTbOBHQx9vcLxRpRJRbr947FNxvoSelhzwlz8l+egm/+UwmvYUUsoH6oGkgYYTLEyWcJtHNWW0blXGvWDcSfxrWYHrCRk4bEQnsbCIg0qwXjkd2Bg3L8V3S4hi9FM18QEv+2GgpRdu7D/P+cS8twt8dYpVi9jfJ8ui6X7Hf0kY3UwoiTwU45/bl0XD4tbT9qdeGX8NXpOPd2gwR3uo0zgeaJuj3ac05FyaR7DX3NQcruxH3MHVTKKhuGiHRj6RPOyWbVep0d8PkGW4m7bDaCNRVHBE0Rc+nlKQeBpi2BWldd9eToL3wtYyvfT63+a2TzZdVV3+eZVZbr3jUkMNvXoXH91x13Vmtw5rSUUN6ymQwFDEyiw486+Y8vjcaoaNskhqU8HrGD/Ban7cpOUie7mNvKUqgVI66/WVGXBd3tCfPrdCciy24CeH0Ge17zvw0K8DF+D/JC/RszP0IygVOcpg82xKVsF5K0SUpQabAaz6Sv0TMW6A=
+  file:
+    - zfs2glacier
+  on:
+    repo: timaebi/zfs2glacier
+    tags: true

@@ -148,7 +148,7 @@ func (b *Batch) upload(vault string, bkp Backup) error {
 
 		treeHash := fmt.Sprintf("%x", h)
 
-		log.WithField("range", r).Debug("multipart uploading range")
+		log.WithField("range", r).WithField("vault", vault).Debug("multipart uploading range")
 		_, err = b.glacier.UploadMultipartPart(&glacier.UploadMultipartPartInput{
 			AccountId: aws.String("-"),
 			Body:      p,
@@ -173,7 +173,7 @@ func (b *Batch) upload(vault string, bkp Backup) error {
 		return err
 	}
 	log.WithField("vault", vault).WithField("archiveID", *cu.ArchiveId).
-		Debug("multipart upload completed")
+		Info("multipart upload completed")
 	return bkp.MarkSuccessful(*cu.ArchiveId)
 }
 
